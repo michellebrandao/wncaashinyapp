@@ -1,0 +1,183 @@
+library(shiny)
+library(tidyverse)
+library(dplyr)
+library(rsconnect)
+ 
+
+
+    
+# Define UI for application that draws a histogram
+    ui <- fluidPage(
+    
+        # Application title
+        titlePanel("Womens NCAA March Madness Helper"),
+        selectInput("Team1", 
+                    "Choose Team 1",
+                    season_team_stats_tot$TeamName
+        ),
+                    
+        
+        selectInput("Team2", 
+                    "Choose Team 2",
+                    season_team_stats_tot$TeamName
+        ),
+            # Show a plot of the generated distribution
+            mainPanel(
+                titlePanel(" 2020 Regular Season Average Stats"),
+                tableOutput("Season_avg_offense"),
+                
+                titlePanel("2020 Opponent Season Average Stats "),
+                tableOutput("Season_avg_defense"),
+            
+                titlePanel("Four Factors"),
+                tableOutput("fourfactors"),
+                
+                titlePanel("Advanced Stats"),
+                tableOutput("advancedstats"),
+                
+                titlePanel("Head to Head Games in the Tournment"),
+                tableOutput("data2"),
+                
+                titlePanel("Head to Head Games in the Regular Season"),
+                tableOutput("data3")
+        ))
+    
+# Define server logic required to draw a histogram
+    server <- function(input, output){
+   
+         ## Regular season Stats 
+        output$Season_avg_offense <- renderTable({
+                team1_statss <- season_team_stats_averages %>%
+                    filter(Season == 2020 &  TeamName == input$Team1) %>% 
+                    mutate(FG = AvgFGM/AvgFGA,
+                           `3P%` = AvgFGM3/AvgFGA3,
+                           `FT%` =AvgFTM/AvgFTA, 
+                           Wins =(wins*GP),
+                            REB = (AvgOR + Avg_DR)) %>% 
+                rename(Points = AvgPoints,
+                   Poss = AvgPoss,
+                   FGM=AvgFGM,
+                   `3PM` = AvgFGM3,
+                   FTM = AvgFTM,
+                   AST= AvgAst,
+                   TO = AvgTO) %>%
+                    select(Season,TeamName,GP,wins,Points,Poss,FG,FGM, `3PM`,`3P%`,FTM,`FT%`,AST,REB,TO,WinPerc,PointsPerPoss)
+                team2_stats <- season_team_stats_averages %>%
+                    filter(Season == 2020 &  TeamName == input$Team2) %>% 
+                    mutate(FG = AvgFGM/AvgFGA,
+                           `3P%` = (AvgFGM3/AvgFGA3),
+                           `FT%` =(AvgFTM/AvgFTA), 
+                           Wins =(wins*GP),
+                REB = (AvgOR + Avg_DR)) %>% 
+                    rename(Points = AvgPoints,
+                           Poss = AvgPoss,
+                           FGM=AvgFGM,
+                           `3PM` = AvgFGM3,
+                           FTM = AvgFTM,
+                           AST= AvgAst,
+                            TO = AvgTO) %>%
+                    select(Season,TeamName,GP,wins,Points,Poss,FG,FGM, `3PM`,`3P%`,FTM,`FT%`,AST,REB,TO,WinPerc,PointsPerPoss)
+                x <- rbind(team1_statss, team2_stats)
+                x
+            })
+    
+## Opponent Stats 
+        output$Season_avg_defense <- renderTable({
+            team1_statss <- season_team_stats_averages %>%
+                filter(Season == 2020 &  TeamName == input$Team1) %>% 
+                rename(Poss = AvgPossAllow,
+                        `3PM` = AvgFGM3Allow,
+                        FGM= AvgFGMAllow,
+                        FTM = AvgFTM,
+                        AST= AvgAst,
+                        TO = AvgTOAllow,
+                        PPP = PointsPerPossAllow,
+                        ST = AvgStlAllow,
+                        BLK = AvgBlkAllow) %>% 
+                mutate(`FG%` = (FGM/AvgFGAAllow),
+                       `3P%` = (`3PM`/AvgFGA3Allow),
+                       `FT%` =(FTM/AvgFTAAllow), 
+                       Wins =(wins*GP),
+                       REB = (AvgDRAllow + AvgORAllow)) %>% select(Season,TeamName,GP,wins,Poss,FGM,`FG%`,`3PM`,`3P%`,FTM,`FT%`,REB,AST,TO,ST,BLK, WinPerc)
+           
+             team2_stats <- season_team_stats_averages %>%
+                filter(Season == 2020 &  TeamName == input$Team2) %>% 
+                rename(Poss = AvgPossAllow,
+                        `3PM` = AvgFGM3Allow,
+                        FGM= AvgFGMAllow,
+                        FTM = AvgFTM,
+                        AST= AvgAst,
+                        TO = AvgTOAllow,
+                        PPP = PointsPerPossAllow,
+                        ST = AvgStlAllow,
+                        BLK = AvgBlkAllow) %>% 
+                mutate(`FG%` = (FGM/AvgFGAAllow),
+                       `3P%` = (`3PM`/AvgFGA3Allow),
+                       `FT%` =(FTM/AvgFTAAllow), 
+                       Wins =(wins*GP),
+                       REB = (AvgDRAllow + AvgORAllow)) %>%
+                select(Season,TeamName,GP,wins,Poss,FGM,`FG%`,`3PM`,`3P%`,FTM,`FT%`,REB,AST,TO,ST,BLK, WinPerc)
+            x <- rbind(team1_statss, team2_stats)
+            x
+        })
+## Four Factors Table 
+        output$fourfactors <- renderTable({
+            team1four_factors_compare <- four_factors %>%
+                filter(Season == 2020 & TeamName == input$Team1) %>% 
+                remane(`EFG%` = EFGPerc,
+                       `Tov%`= TovPerc,
+                       `OReb%` = ORebPerc,
+                       `DReb%`= DRebPerc)
+            team2four_factors_compare <- four_factors %>%
+                filter(Season == 2020 &TeamName == input$Team2) %>%
+                remane(`EFG%` = EFGPerc,
+                       `Tov%`= TovPerc,
+                       `OReb%` = ORebPerc,
+                       `DReb%`= DRebPerc,
+                       `TotReb%` = TotRebPerc)
+            x <- rbind(team1four_factors_compare, team2four_factors_compare)
+            x
+        })
+        
+## Advanced Stats 
+        output$advancedstats <- renderTable({
+            team1advancedstats <- advanced_stats_season %>%
+                filter(Season == 2020 & TeamName == input$Team1) %>%  
+                select(Season, TeamName, TotPoints, wins, WinPerc, OffRtg, DefRtg, SoS, Pie, OPie, Tie, AstRatio, TORatio, TSPerc, FTRate, `3Prate`, OffRebPerc, DefRebPerc, TotRebPerc) %>%
+                rename(TotalPoints = TotPoints,
+                        `Win%`= WinPerc,
+                        `TS%` = TSPerc,
+                        `OffReb%`= OffRebPerc,
+                        `DefReb%` = DefRebPerc)
+            team2advancedstats <- advanced_stats_season %>%
+                filter(Season == 2020 &TeamName == input$Team2) %>%   
+                select(Season, TeamName, TotPoints, wins, WinPerc, OffRtg, DefRtg, SoS, Pie, OPie, Tie, AstRatio, TORatio, TSPerc, FTRate, `3Prate`, OffRebPerc, DefRebPerc, TotRebPerc) %>%
+                rename(TotalPoints = TotPoints,
+                       `Win%`= WinPerc,
+                       `TS%` = TSPerc,
+                       `OffReb%`= OffRebPerc,
+                       `DefReb%` = DefRebPerc)
+            x <- rbind( team1advancedstats, team2advancedstats)
+        })
+
+        output$data2 <- renderTable({
+            team1_matchup_posseason <- WNCAATourneyCompactResults %>%
+                filter(WTeamName == input$Team1 & LTeamName ==input$Team2)
+            team2_matchup_posseason <- WNCAATourneyCompactResults %>%
+                filter(WTeamName == input$Team2 & LTeamName ==input$Team1)
+            x <- rbind( team1_matchup_posseason, team2_matchup_posseason) %>% arrange(desc(Season)) %>%
+                top_n(10,Season)
+        })   
+## Regular Season Stats 
+            output$data3 <- renderTable({
+                team1_matchup_regseason <- WRegularSeasonCompactResults %>%
+                    filter(WTeamName == input$Team1 & LTeamName ==input$Team2)
+                team2_matchup_regseason <- WRegularSeasonCompactResults %>%
+                    filter(WTeamName == input$Team2 & LTeamName ==input$Team1) 
+                x <- rbind( team1_matchup_regseason, team2_matchup_regseason) %>% arrange(desc(Season)) %>%
+                    top_n(10,Season)
+        })
+    }
+    
+# Run the application 
+    shinyApp(ui = ui, server = server)
